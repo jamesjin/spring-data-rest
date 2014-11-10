@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -35,12 +36,15 @@ import org.springframework.util.StringUtils;
 
 /**
  * A {@link RepositoryMethodResourceMapping} created from a {@link Method}.
- * 
+ *
  * @author Oliver Gierke
+ * @author James Jin
  */
 class RepositoryMethodResourceMapping implements MethodResourceMapping {
 
 	private static final AnnotationAttribute PARAM_VALUE = new AnnotationAttribute(Param.class);
+
+	private static final Pattern QUERY_PATTERN = Pattern.compile("^(find|read|get|query|count).*");
 
 	private final boolean isExported;
 	private final String rel;
@@ -53,7 +57,7 @@ class RepositoryMethodResourceMapping implements MethodResourceMapping {
 
 	/**
 	 * Creates a new {@link RepositoryMethodResourceMapping} for the given {@link Method}.
-	 * 
+	 *
 	 * @param method must not be {@literal null}.
 	 * @param resourceMapping must not be {@literal null}.
 	 */
@@ -65,7 +69,7 @@ class RepositoryMethodResourceMapping implements MethodResourceMapping {
 		RestResource annotation = AnnotationUtils.findAnnotation(method, RestResource.class);
 		String resourceRel = resourceMapping.getRel();
 
-		this.isExported = annotation != null ? annotation.exported() : true;
+		this.isExported = annotation != null ? annotation.exported() : isExportedByDefault(method);
 		this.rel = annotation == null || !StringUtils.hasText(annotation.rel()) ? method.getName() : annotation.rel();
 		this.path = annotation == null || !StringUtils.hasText(annotation.path()) ? new Path(method.getName()) : new Path(
 				annotation.path());
@@ -78,7 +82,14 @@ class RepositoryMethodResourceMapping implements MethodResourceMapping {
 		this.sorting = parameterTypes.contains(Sort.class);
 	}
 
-	private static final List<ParameterMetadata> discoverParameterMetadata(Method method, String baseRel) {
+	/**
+	 * export query method by default, but not the delete/remove/update methods.
+	 */
+	private boolean isExportedByDefault(Method method) {
+		return QUERY_PATTERN.matcher(method.getName()).matches();
+	}
+
+	private static List<ParameterMetadata> discoverParameterMetadata(Method method, String baseRel) {
 
 		List<ParameterMetadata> result = new ArrayList<ParameterMetadata>();
 

@@ -33,8 +33,9 @@ import org.springframework.data.rest.core.annotation.RestResource;
 
 /**
  * Unit tests for {@link RepositoryMethodResourceMapping}.
- * 
+ *
  * @author Oliver Gierke
+ * @author James Jin
  */
 public class RepositoryMethodResourceMappingUnitTests {
 
@@ -122,6 +123,20 @@ public class RepositoryMethodResourceMappingUnitTests {
 		assertThat(mapping.isSortableResource(), is(false));
 	}
 
+	/**
+	 * @see DATAREST-407
+	 */
+	@Test
+	public void deleteOrRemoveMethodsAreNotExposedByDefault() throws Exception {
+		Method method = PersonRepository.class.getMethod("deleteByEmailAddress", String.class);
+		RepositoryMethodResourceMapping mapping = new RepositoryMethodResourceMapping(method, resourceMapping);
+		assertThat(mapping.isExported(), is(false));
+
+		method = PersonRepository.class.getMethod("findByEmailAddress", String.class);
+		mapping = new RepositoryMethodResourceMapping(method, resourceMapping);
+		assertThat(mapping.isExported(), is(true));
+	}
+
 	static class Person {}
 
 	interface PersonRepository extends Repository<Person, Long> {
@@ -138,5 +153,7 @@ public class RepositoryMethodResourceMappingUnitTests {
 		Page<Person> findByEmailAddress(String email, Pageable pageable);
 
 		Page<Person> findByEmailAddress(String email, Sort pageable);
+
+		int deleteByEmailAddress(@Param("email")String email);
 	}
 }
